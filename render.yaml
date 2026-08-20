@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: medical-ai-backend
+    runtime: python
+    pythonVersion: "3.11.9"
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn chatbotwithpdf:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: CHARACTER_AI_TOKEN
+        sync: false
+      - key: CHARACTER_ID
+        sync: false
+      - key: AI_SERVER_URL
+        sync: false

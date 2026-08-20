@@ -1,0 +1,27 @@
+[project]
+name = "medicalchatbotwithrag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.128.0",
+    "fastembed>=0.7.4",
+    "fpdf2>=2.8.6",
+    "groq>=1.0.0",
+    "langgraph>=1.0.5",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.1",
+    "pandas>=2.3.3",
+    "pdfplumber>=0.11.9",
+    "pillow>=11.3.0",
+    "pinecone>=8.0.0",
+    "pycharacterai>=2.2.50",
+    "pydantic>=2.12.5",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.21",
+    "reportlab>=4.4.7",
+    "sarvamai>=0.1.25",
+    "seaborn>=0.13.2",
+    "uvicorn>=0.40.0",
+]

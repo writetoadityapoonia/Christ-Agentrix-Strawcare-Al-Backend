@@ -1,0 +1,15 @@
+/home/adityapoonia/GitHub/Christ-Agentrix-Strawcare-Al-Backend/venv/lib/python3.14/site-packages/langchain_core/_api/deprecation.py:25: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1.fields import FieldInfo as FieldInfoV1
+INFO:     Started server process [122129]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Medical AI Platform started successfully!
+   - LangGraph Chatbot: Ready
+   - Pinecone RAG: Ready
+   - PDF Processor V2: Ready
+INFO:     127.0.0.1:52572 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [122129]
