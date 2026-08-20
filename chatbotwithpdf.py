@@ -286,18 +286,34 @@ class ChatbotGraph:
         prompt = f"""You are a medical triage assistant. Analyze this patient message and determine:
 1. The main illness/symptoms described
 2. Appropriate medical specialties
-3. Whether this is a SERIOUS/URGENT condition requiring immediate attention
+3. Whether this is a SERIOUS/URGENT condition requiring immediate medical attention
 
-SERIOUS conditions include but are not limited to:
-- Chest pain, heart attack symptoms
-- Difficulty breathing, respiratory distress
-- Stroke symptoms (facial drooping, slurred speech, sudden weakness)
-- Severe bleeding or trauma
-- Severe allergic reactions
-- Loss of consciousness
-- Severe abdominal pain
-- High fever with confusion
+IMPORTANT: Only flag as SERIOUS if there is genuine medical urgency. Common/mild conditions should NOT be flagged as serious.
+
+SERIOUS (is_serious: true) — requires immediate medical attention:
+- Chest pain, heart attack symptoms, irregular heartbeat
+- Difficulty breathing, choking, respiratory distress
+- Stroke symptoms (facial drooping, slurred speech, sudden weakness on one side)
+- Severe uncontrolled bleeding or major trauma
+- Severe allergic reactions (swelling throat, anaphylaxis)
+- Loss of consciousness or seizure
+- Severe abdominal pain with fever/vomiting
+- High fever (>103°F/39.5°C) with confusion or stiff neck
 - Suicidal thoughts or self-harm
+- Suspected poisoning or overdose
+- Severe burns
+
+NOT SERIOUS (is_serious: false) — home care and self-care appropriate:
+- Common cold, mild flu, sore throat
+- Mild headache, mild body ache
+- Small cuts, minor bruises
+- Mild stomach upset, indigestion, mild diarrhea
+- Mild allergies (sneezing, runny nose, mild rash)
+- Mild fever (<101°F/38.3°C)
+- Cough, mild congestion
+- Minor sprains, back pain
+- General tiredness, fatigue
+- Mild skin irritation
 
 Patient message: "{english_message}"
 
@@ -361,22 +377,41 @@ Respond in JSON format ONLY:
         censored = state.get("censored_message", state["user_message"])
         illness = state.get("illness", "")
         specialties = state.get("specialties", [])
+        is_serious = state.get("is_serious", False)
         specialty_str = ", ".join(specialties[:3]) if specialties else "General Medicine"
 
-        prompt = f"""You are a friendly and professional AI medical assistant called StrawCare HealthBot.
-Your role is to help users understand their health concerns, suggest when to see a doctor, and provide general wellness advice.
+        if is_serious:
+            prompt = f"""You are StrawCare HealthBot, a caring AI medical assistant. The patient's symptoms have been flagged as potentially serious.
 
-IMPORTANT RULES:
+Detected condition: {illness}
+Recommended specialties: {specialty_str}
+Patient says: "{censored}"
+
+RULES:
 - You are NOT a doctor. Never diagnose or prescribe medication.
-- Always recommend consulting a real doctor for specific medical advice.
-- Be warm, empathetic, and professional.
-- Keep responses concise (2-4 paragraphs max).
-- If symptoms seem serious, strongly encourage immediate medical attention.
+- Be empathetic but direct. This seems serious.
+- Strongly recommend seeing a doctor or visiting an emergency room.
+- Give 1-2 immediate things they can do right now (e.g., rest, stay hydrated, call emergency services if severe).
+- Do NOT downplay or suggest home remedies for serious symptoms.
+- Keep it to 2-3 short paragraphs.
+- If they mention chest pain, difficulty breathing, stroke symptoms, severe bleeding, or loss of consciousness, tell them to call emergency services immediately."""
+        else:
+            prompt = f"""You are StrawCare HealthBot, a friendly and helpful AI medical assistant. The patient's symptoms are NOT serious.
 
-Detected condition: {illness or "General health inquiry"}
-Relevant specialties: {specialty_str}
+Detected condition: {illness}
+Patient says: "{censored}"
 
-User message: "{censored}" """
+RULES:
+- You are NOT a doctor. Never diagnose or prescribe medication.
+- Be warm, friendly, and helpful.
+- For minor issues (cold, mild headache, small cuts, mild stomach ache, allergies, etc.):
+  * Suggest practical home remedies and self-care tips
+  * Recommend over-the-counter options if appropriate (e.g., "you could try paracetamol for the fever")
+  * Give helpful guidelines (rest, fluids, when to monitor symptoms)
+- Only mention seeing a doctor if symptoms persist for more than a few days or worsen.
+- Do NOT over-medicalize minor issues. A common cold doesn't need a doctor visit.
+- Keep it concise and conversational (2-3 short paragraphs).
+- End with something reassuring unless the situation truly warrants medical attention."""
 
         try:
             response = self.groq_client.chat.completions.create(
