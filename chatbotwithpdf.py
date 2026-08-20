@@ -225,11 +225,13 @@ class MessageCensor:
         """
         try:
             response = self.groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.0, max_tokens=200
             )
             censored_text = response.choices[0].message.content.strip()
+            # Strip <think>...</think> tags from Qwen model
+            censored_text = re.sub(r"<think>.*?</think>", "", censored_text, flags=re.DOTALL).strip()
             if (censored_text.startswith('"') and censored_text.endswith('"')) or \
                (censored_text.startswith("'") and censored_text.endswith("'")):
                 censored_text = censored_text[1:-1]
@@ -308,11 +310,13 @@ Respond in JSON format ONLY:
 }}"""
         try:
             response = self.groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.0, max_tokens=300,
             )
             content = response.choices[0].message.content.strip()
+            # Strip <think>...</think> tags from Qwen model
+            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
@@ -354,14 +358,39 @@ Respond in JSON format ONLY:
         return {"censored_message": censored}
 
     async def _get_character_response_node(self, state: ChatState) -> dict:
-        await self._ensure_character_client()
-        answer = await self.client.chat.send_message(
-            self.character_id, self.chat.chat_id,
-            state["censored_message"], streaming=True
-        )
-        full_response = ""
-        async for r in answer:
-            full_response = r.get_primary_candidate().text
+        censored = state.get("censored_message", state["user_message"])
+        illness = state.get("illness", "")
+        specialties = state.get("specialties", [])
+        specialty_str = ", ".join(specialties[:3]) if specialties else "General Medicine"
+
+        prompt = f"""You are a friendly and professional AI medical assistant called StrawCare HealthBot.
+Your role is to help users understand their health concerns, suggest when to see a doctor, and provide general wellness advice.
+
+IMPORTANT RULES:
+- You are NOT a doctor. Never diagnose or prescribe medication.
+- Always recommend consulting a real doctor for specific medical advice.
+- Be warm, empathetic, and professional.
+- Keep responses concise (2-4 paragraphs max).
+- If symptoms seem serious, strongly encourage immediate medical attention.
+
+Detected condition: {illness or "General health inquiry"}
+Relevant specialties: {specialty_str}
+
+User message: "{censored}" """
+
+        try:
+            response = self.groq_client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7, max_tokens=500,
+            )
+            raw = response.choices[0].message.content.strip()
+            # Strip <think>...</think> tags from Qwen model
+            full_response = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+        except Exception as e:
+            print(f"Error getting chat response: {e}")
+            full_response = "I'm having trouble processing your request right now. Please try again or consult a healthcare professional for immediate assistance."
+
         return {
             "character_response": full_response,
             "final_response": full_response,
@@ -478,7 +507,7 @@ Rules: Always valid JSON. Use "N/A" for missing. Extract every test found.
 def parse_with_llm(text: str) -> dict:
     client = Groq(api_key=GROQ_API_KEY)
     last = None
-    for model in ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"]:
+    for model in ["openai/gpt-oss-120b", "openai/gpt-oss-20b"]:
         try:
             resp = client.chat.completions.create(
                 model=model,
@@ -1257,4 +1286,4 @@ def download_report(filename: str):
 # ==================== RUN ====================
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("chatbotwithpdf:app", host="0.0.0.0", port=8000, reload=True)
